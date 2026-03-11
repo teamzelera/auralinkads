@@ -64,6 +64,17 @@ export default function DevicePlayer() {
         }
     }, []);
 
+    // Auto-open settings panel if navigated here with ?settings=1
+    useEffect(() => {
+        const params = new URLSearchParams(window.location.search);
+        if (params.get("settings") === "1") {
+            setShowSettings(true);
+            setSettingsMenu("main");
+            // Clean the query param from the URL without a reload
+            window.history.replaceState({}, "", window.location.pathname);
+        }
+    }, []);
+
     // Reset video tracking when active assignment changes
     useEffect(() => {
         if (assignment?.id) setCurrentVideoIdx(0);

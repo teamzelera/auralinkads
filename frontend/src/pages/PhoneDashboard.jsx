@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { Send, Clock, LogOut, Smartphone } from "lucide-react";
 import logo from "../images/logo.jpeg";
+import DeviceSettingsButton from "../components/DeviceSettingsButton";
 
 export default function PhoneDashboard() {
     const [deviceCode, setDeviceCode] = useState("");
@@ -36,7 +37,10 @@ export default function PhoneDashboard() {
     return (
         <div className="min-h-screen bg-black text-white flex flex-col">
             {/* Header */}
-            <div className="pt-12 pb-6 px-6 text-center">
+            <div className="pt-12 pb-6 px-6 text-center relative">
+                <div className="absolute top-4 right-4">
+                    <DeviceSettingsButton />
+                </div>
                 <div className="w-16 h-16 rounded-2xl mx-auto flex items-center justify-center mb-4 shadow-glow bg-white overflow-hidden">
                     <img src={logo} alt="AuraLink" className="w-full h-full object-contain" />
                 </div>

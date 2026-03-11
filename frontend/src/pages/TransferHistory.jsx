@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { ArrowLeft, CheckCircle, XCircle, Clock, Send } from "lucide-react";
 import logo from "../images/logo.jpeg";
+import DeviceSettingsButton from "../components/DeviceSettingsButton";
 
 const PLAYER_API = import.meta.env.VITE_API_BASE || "http://localhost:8000/api";
 
@@ -63,6 +64,7 @@ export default function TransferHistory() {
                     <h1 className="text-white font-semibold text-base leading-tight">Transfer History</h1>
                     <p className="text-gray-500 text-xs">{deviceCode}</p>
                 </div>
+                <DeviceSettingsButton />
             </div>
 
             <div className="flex-1 overflow-y-auto">

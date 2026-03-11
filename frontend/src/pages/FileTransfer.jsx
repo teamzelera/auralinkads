@@ -4,6 +4,7 @@ import { QRCodeSVG } from "qrcode.react";
 import logo from "../images/logo.jpeg";
 import { saveReceivedFile } from "../utils/localVideoDb";
 import { getWsBase, resolveMediaUrl } from "../utils/backendUrls";
+import DeviceSettingsButton from "../components/DeviceSettingsButton";
 
 const PLAYER_API = import.meta.env.VITE_API_BASE || "http://localhost:8000/api";
 const WS_BASE = import.meta.env.VITE_WS_BASE || "ws://localhost:8000";
@@ -287,6 +288,7 @@ export default function FileTransfer() {
                         {mode === "phone" ? "Transfer video to TV" : "Waiting for files"}
                     </p>
                 </div>
+                <DeviceSettingsButton />
             </div>
 
             {/* TV Receiver UI */}

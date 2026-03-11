@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import { ArrowLeft, Upload, Play, Trash2, Film, CheckCircle, AlertCircle } from "lucide-react";
 import logo from "../images/logo.jpeg";
 import { saveLocalVideo, getLocalVideoRecord, deleteLocalVideo } from "../utils/localVideoDb";
+import DeviceSettingsButton from "../components/DeviceSettingsButton";
 
 const PLAYER_API = import.meta.env.VITE_API_BASE || "http://localhost:8000/api";
 const MAX_SIZE_BYTES = 500 * 1024 * 1024; // 500 MB
@@ -135,6 +136,7 @@ export default function LocalVideoUpload() {
                     <h1 className="text-white font-semibold text-base leading-tight">Local Video</h1>
                     <p className="text-gray-500 text-xs">Upload from device storage</p>
                 </div>
+                <DeviceSettingsButton />
             </div>
 
             <div className="flex-1 overflow-y-auto p-5 space-y-5 max-w-xl mx-auto w-full">

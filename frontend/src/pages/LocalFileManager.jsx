@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import { ArrowLeft, Play, Trash2, Film, HardDrive } from "lucide-react";
 import logo from "../images/logo.jpeg";
 import { getAllReceivedFiles, getReceivedFileUrl, deleteReceivedFile } from "../utils/localVideoDb";
+import DeviceSettingsButton from "../components/DeviceSettingsButton";
 
 export default function LocalFileManager() {
     const [files, setFiles] = useState([]);
@@ -64,6 +65,7 @@ export default function LocalFileManager() {
                     <h1 className="text-white font-semibold text-base leading-tight">Local Files</h1>
                     <p className="text-gray-500 text-xs">{files.length} file{files.length !== 1 ? "s" : ""} stored</p>
                 </div>
+                <DeviceSettingsButton />
             </div>
 
             {/* Player */}

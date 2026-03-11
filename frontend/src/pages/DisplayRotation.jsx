@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { ArrowLeft, RotateCw } from "lucide-react";
+import DeviceSettingsButton from "../components/DeviceSettingsButton";
 
 export default function DisplayRotation() {
     const [rotationAngle, setRotationAngle] = useState(0);
@@ -37,6 +38,7 @@ export default function DisplayRotation() {
                 <h1 className="text-2xl font-bold bg-gradient-to-r from-white to-gray-400 bg-clip-text text-transparent">
                     Display Rotation
                 </h1>
+                <DeviceSettingsButton />
             </div>
 
             <div className="flex-1 max-w-2xl mx-auto w-full space-y-8">
