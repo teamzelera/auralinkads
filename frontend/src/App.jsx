@@ -14,6 +14,7 @@ import FileTransfer from "./pages/FileTransfer";
 import PhoneDashboard from "./pages/PhoneDashboard";
 import LocalFileManager from "./pages/LocalFileManager";
 import TransferHistory from "./pages/TransferHistory";
+import DisplayRotation from "./pages/DisplayRotation";
 import logo from "./images/logo.jpeg";
 
 function PrivateRoute({ children }) {
@@ -62,6 +63,7 @@ export default function App() {
           <Route path="/device/phone" element={<PhoneDashboard />} />
           <Route path="/device/files" element={<LocalFileManager />} />
           <Route path="/device/transfers" element={<TransferHistory />} />
+          <Route path="/device/display-rotation" element={<DisplayRotation />} />
           
           <Route
             path="/dashboard"

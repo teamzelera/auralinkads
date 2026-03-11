@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from "react";
-import { Settings, X, LogOut, Trash2, Info, FileText, Mail, Upload, Send, FolderOpen, Clock } from "lucide-react";
+import { Settings, X, LogOut, Trash2, Info, FileText, Mail, Upload, Send, FolderOpen, Clock, RotateCw } from "lucide-react";
 import logo from "../images/logo.jpeg";
 import { getLocalVideoUrl, saveReceivedFile } from "../utils/localVideoDb";
 
@@ -25,6 +25,8 @@ export default function DevicePlayer() {
     const transferQueueRef = useRef([]);
     const processingRef = useRef(false);
 
+    const [deviceRotation, setDeviceRotation] = useState(0);
+
     const videoRef = useRef();
     const heartbeatRef = useRef();
     const pollRef = useRef();
@@ -49,11 +51,16 @@ export default function DevicePlayer() {
         }
     }, [step]);
 
-    // On mount: load local video from IndexedDB
+    // On mount: load local video and rotation from IndexedDB/localStorage
     useEffect(() => {
         getLocalVideoUrl()
             .then((url) => { if (url) setLocalVideoUrl(url); })
             .catch(() => {});
+            
+        const savedAngle = localStorage.getItem("device_rotation_angle");
+        if (savedAngle !== null) {
+            setDeviceRotation(Number(savedAngle));
+        }
     }, []);
 
     // Reset video tracking when active assignment changes
@@ -288,8 +295,11 @@ export default function DevicePlayer() {
     }
 
     // ── Player screen ──────────────────────────────────────
-    return (
-        <div className="min-h-screen bg-black relative overflow-hidden">
+    const renderRotatedVideo = () => (
+        <div 
+            className="w-full h-full flex items-center justify-center transition-transform duration-500 origin-center" 
+            style={{ transform: `rotate(${deviceRotation}deg)` }}
+        >
             {/* Video player — Priority: 1) Local IndexedDB video  2) Playlist  3) Waiting + QR code */}
             {localVideoUrl ? (
                 <video className="w-full h-screen object-cover" src={localVideoUrl} autoPlay loop muted playsInline preload="auto" />
@@ -319,11 +329,11 @@ export default function DevicePlayer() {
                     )}
                 </>
             ) : assignment ? (
-                <div className="w-full h-screen flex flex-col items-center justify-center">
+                <div className="w-full h-screen flex flex-col items-center justify-center bg-black">
                     <p className="text-gray-600 text-lg">No playback media available for this device assignment.</p>
                 </div>
             ) : (
-                <div className="w-full h-screen flex flex-col items-center justify-center">
+                <div className="w-full h-screen flex flex-col items-center justify-center bg-black">
                     <div className="w-24 h-24 rounded-3xl flex items-center justify-center mb-6 shadow-glow animate-pulse-slow bg-white overflow-hidden">
                         <img src={logo} alt="AuraLink Logo" className="w-full h-full object-contain" />
                     </div>
@@ -338,6 +348,14 @@ export default function DevicePlayer() {
                     )}
                 </div>
             )}
+        </div>
+    );
+
+    return (
+        <div className="min-h-screen bg-black relative overflow-hidden">
+            <div className="absolute inset-0 z-0">
+                {renderRotatedVideo()}
+            </div>
 
             {/* Transfer notification toast */}
             {transferNotification && (
@@ -375,6 +393,7 @@ export default function DevicePlayer() {
                                     { icon: Send, label: "Send / Receive Files", action: () => { setShowSettings(false); window.location.href = `/device/transfer`; }, color: "text-purple-300 hover:bg-purple-500/10" },
                                     { icon: FolderOpen, label: "Local File Manager", action: () => { setShowSettings(false); window.location.href = "/device/files"; }, color: "text-cyan-300 hover:bg-cyan-500/10" },
                                     { icon: Clock, label: "Transfer History", action: () => { setShowSettings(false); window.location.href = `/device/transfers?code=${deviceCode}`; }, color: "text-blue-300 hover:bg-blue-500/10" },
+                                    { icon: RotateCw, label: "Display Rotation", action: () => { setShowSettings(false); window.location.href = "/device/display-rotation"; }, color: "text-pink-300 hover:bg-pink-500/10" },
                                 ].map(({ icon: Icon, label, action, color }) => (
                                     <button key={label} onClick={action}
                                         className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-left transition-colors duration-200 ${color}`}>
