@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { Settings, X, LogOut, Trash2, Info, FileText, Mail, Upload, Send, FolderOpen, Clock, RotateCw } from "lucide-react";
 import logo from "../images/logo.jpeg";
 import { getLocalVideoUrl, saveReceivedFile } from "../utils/localVideoDb";
+import { getWsBase, resolveMediaUrl } from "../utils/backendUrls";
 
 const PLAYER_API = import.meta.env.VITE_API_BASE || "http://localhost:8000/api";
 const WS_BASE = import.meta.env.VITE_WS_BASE || "ws://localhost:8000";
@@ -109,15 +110,15 @@ export default function DevicePlayer() {
             try {
                 setTransferNotification(`Downloading: ${item.file_name}...`);
 
-                // Build full URL for download
-                const downloadUrl = item.file_url.startsWith("http")
-                    ? item.file_url
-                    : `${window.location.protocol}//${window.location.hostname}:8000${item.file_url}`;
+                // Resolve URL using shared utility — works in dev and production
+                const downloadUrl = resolveMediaUrl(item.file_url);
+                console.log("Downloading transfer from:", downloadUrl);
 
                 const response = await fetch(downloadUrl);
                 if (!response.ok) throw new Error("Download failed");
 
                 const blob = await response.blob();
+                console.log("Saving received file to IndexedDB:", item.file_name);
                 await saveReceivedFile(blob, item.file_name, item.file_type);
 
                 // Confirm to backend
@@ -145,51 +146,71 @@ export default function DevicePlayer() {
     useEffect(() => {
         if (step !== "playing" || !deviceCode) return;
 
-        const protocol = window.location.protocol === "https:" ? "wss" : "ws";
-        const wsUrl = `${protocol}://${window.location.host}/ws/device/${deviceCode}/transfer/`;
-        const ws = new WebSocket(wsUrl);
-        wsRef.current = ws;
+        let ws;
+        let retryTimeout;
+        let destroyed = false;
 
-        ws.onopen = () => console.log("Transfer WS connected:", deviceCode);
-        ws.onclose = () => console.log("Transfer WS disconnected");
-        ws.onerror = (e) => console.error("Transfer WS error:", e);
+        const connect = () => {
+            if (destroyed) return;
+            // Use VITE_WS_BASE (Render backend) — not window.location.host (Vercel frontend)
+            const wsUrl = `${getWsBase()}/ws/device/${deviceCode}/transfer/`;
+            console.log("Connecting transfer WS:", wsUrl);
+            ws = new WebSocket(wsUrl);
+            wsRef.current = ws;
 
-        ws.onmessage = (e) => {
-            try {
-                const data = JSON.parse(e.data);
-                console.log("Transfer WS message:", data);
+            ws.onopen = () => console.log("Transfer WS connected:", deviceCode);
 
-                if (data.type === "transfer_started") {
-                    setTransferNotification(`Incoming: ${data.file_name}`);
+            ws.onclose = () => {
+                if (!destroyed) {
+                    console.warn("Transfer WS closed — retrying in 4s...");
+                    retryTimeout = setTimeout(connect, 4000);
                 }
+            };
 
-                if (data.type === "file_transfer") {
-                    // Add to queue
-                    transferQueueRef.current.push({
-                        file_url: data.file_url,
-                        file_name: data.file_name,
-                        file_type: data.file_type,
-                        file_size: data.file_size,
-                        transfer_id: data.transfer_id,
-                    });
-                    processQueue();
-                }
+            ws.onerror = (e) => console.error("Transfer WS error:", e);
 
-                if (data.type === "transfer_completed") {
-                    setTransferNotification(`✓ Confirmed: ${data.file_name}`);
-                    setTimeout(() => setTransferNotification(null), 3000);
-                }
+            ws.onmessage = (e) => {
+                try {
+                    const data = JSON.parse(e.data);
+                    console.log("Transfer WS message:", data);
 
-                if (data.type === "transfer_failed") {
-                    setTransferNotification(`✗ Failed: ${data.file_name}`);
-                    setTimeout(() => setTransferNotification(null), 4000);
+                    if (data.type === "transfer_started") {
+                        setTransferNotification(`Incoming: ${data.file_name}`);
+                    }
+
+                    if (data.type === "file_transfer") {
+                        transferQueueRef.current.push({
+                            file_url: data.file_url,
+                            file_name: data.file_name,
+                            file_type: data.file_type,
+                            file_size: data.file_size,
+                            transfer_id: data.transfer_id,
+                        });
+                        processQueue();
+                    }
+
+                    if (data.type === "transfer_completed") {
+                        setTransferNotification(`✓ Confirmed: ${data.file_name}`);
+                        setTimeout(() => setTransferNotification(null), 3000);
+                    }
+
+                    if (data.type === "transfer_failed") {
+                        setTransferNotification(`✗ Failed: ${data.file_name}`);
+                        setTimeout(() => setTransferNotification(null), 4000);
+                    }
+                } catch (err) {
+                    console.error("WS parse error:", err);
                 }
-            } catch (err) {
-                console.error("WS parse error:", err);
-            }
+            };
         };
 
-        return () => { ws.close(); wsRef.current = null; };
+        connect();
+
+        return () => {
+            destroyed = true;
+            clearTimeout(retryTimeout);
+            if (wsRef.current) { wsRef.current.close(); wsRef.current = null; }
+        };
     }, [step, deviceCode, processQueue]);
 
 

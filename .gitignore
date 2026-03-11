@@ -7,3 +7,5 @@ env/
 dist/
 build/
 .DS_Store
+backend/media/transfers/
+backend/db.sqlite3

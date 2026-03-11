@@ -133,6 +133,9 @@ CORS_ALLOWED_ORIGINS = os.environ.get(
 ).split(",")
 CORS_ALLOW_ALL_ORIGINS = True
 CORS_ALLOW_CREDENTIALS = True
+# Allow CORS for both /api/ and /media/ endpoints
+# (TV browser fetches /media/transfers/ video files cross-origin from Vercel to Render)
+CORS_URLS_REGEX = r"^/(api|media)/.*$"
 
 # REST Framework
 REST_FRAMEWORK = {

@@ -41,6 +41,8 @@ urlpatterns = [
     path("redoc/", schema_view.with_ui('redoc', cache_timeout=0), name='schema-redoc'),
 ]
 
-# Serve media files in development
-if django_settings.DEBUG:
-    urlpatterns += static(django_settings.MEDIA_URL, document_root=django_settings.MEDIA_ROOT)
+# Serve media files in development AND production
+# WhiteNoise only handles staticfiles — MEDIA_ROOT must be served separately.
+# On Render (free tier), disk is ephemeral but files persist within a request cycle.
+# Transferred files are deleted after TV confirms receipt, so this is acceptable.
+urlpatterns += static(django_settings.MEDIA_URL, document_root=django_settings.MEDIA_ROOT)
