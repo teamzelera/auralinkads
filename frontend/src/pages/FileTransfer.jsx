@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from "react";
+import { useNavigate } from "react-router-dom";
 import { ArrowLeft, Send, CheckCircle, AlertCircle, Loader2, Film, Download } from "lucide-react";
 import { QRCodeSVG } from "qrcode.react";
 import logo from "../images/logo.jpeg";
@@ -59,6 +60,8 @@ export default function FileTransfer() {
 
     // ==== TV Receiver Logic ====
 
+    const navigate = useNavigate();
+
     const processQueue = useCallback(async () => {
         if (processingRef.current || transferQueueRef.current.length === 0) return;
         processingRef.current = true;
@@ -86,8 +89,9 @@ export default function FileTransfer() {
                     body: JSON.stringify({ transfer_id: item.transfer_id }),
                 }).catch(() => {});
 
-                setTransferNotification(`✓ Received: ${item.file_name}`);
-                setTimeout(() => setTransferNotification(null), 4000);
+                // Show success toast then redirect to file manager
+                setTransferNotification(`✅ Received: ${item.file_name} — Opening File Manager...`);
+                setTimeout(() => navigate("/device/files"), 1500);
             } catch (err) {
                 console.error("Transfer download failed:", err);
                 setTransferNotification(`✗ Failed: ${item.file_name}`);
@@ -97,7 +101,7 @@ export default function FileTransfer() {
         }
 
         processingRef.current = false;
-    }, []);
+    }, [navigate]);
 
     useEffect(() => {
         if (mode !== "tv" || !deviceCode) return;

@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { Settings, X, LogOut, Trash2, Info, FileText, Mail, Upload, Send, FolderOpen, Clock, RotateCw } from "lucide-react";
 import logo from "../images/logo.jpeg";
-import { getLocalVideoUrl, saveReceivedFile } from "../utils/localVideoDb";
+import { getLocalVideoUrl, saveReceivedFile, getPlaylistById, getReceivedFileUrl } from "../utils/localVideoDb";
 import { getWsBase, resolveMediaUrl } from "../utils/backendUrls";
 
 const PLAYER_API = import.meta.env.VITE_API_BASE || "http://localhost:8000/api";
@@ -25,6 +25,11 @@ export default function DevicePlayer() {
     const [transferNotification, setTransferNotification] = useState(null);
     const transferQueueRef = useRef([]);
     const processingRef = useRef(false);
+
+    // IndexedDB active playlist
+    const [activeIndexedPlaylist, setActiveIndexedPlaylist] = useState(null); // playlist object
+    const [idxPlaylistIdx, setIdxPlaylistIdx] = useState(0);                   // current file index in it
+    const [idxVideoUrl, setIdxVideoUrl] = useState(null);                      // blob URL for current file
 
     const [deviceRotation, setDeviceRotation] = useState(0);
 
@@ -61,6 +66,14 @@ export default function DevicePlayer() {
         const savedAngle = localStorage.getItem("device_rotation_angle");
         if (savedAngle !== null) {
             setDeviceRotation(Number(savedAngle));
+        }
+
+        // Load active IndexedDB playlist if one is set
+        const activeId = localStorage.getItem("activePlaylistId");
+        if (activeId) {
+            getPlaylistById(Number(activeId))
+                .then((pl) => { if (pl) setActiveIndexedPlaylist(pl); })
+                .catch(() => {});
         }
     }, []);
 
@@ -262,6 +275,19 @@ export default function DevicePlayer() {
         handleLogout();
     };
 
+    // ── IndexedDB playlist file loader ──────────────────────
+    useEffect(() => {
+        if (!activeIndexedPlaylist) return;
+        let revokeUrl;
+        getReceivedFileUrl(activeIndexedPlaylist.files[idxPlaylistIdx].fileId)
+            .then((url) => {
+                setIdxVideoUrl(url);
+                revokeUrl = url;
+            })
+            .catch(() => {});
+        return () => { if (revokeUrl) URL.revokeObjectURL(revokeUrl); };
+    }, [activeIndexedPlaylist, idxPlaylistIdx]);
+
     const isSingleVideo = !!assignment?.video;
     const videos = isSingleVideo
         ? [{ id: assignment.video.id, video: assignment.video }]
@@ -332,8 +358,31 @@ export default function DevicePlayer() {
             className="w-full h-full flex items-center justify-center transition-transform duration-500 origin-center" 
             style={{ transform: `rotate(${deviceRotation}deg)` }}
         >
-            {/* Video player — Priority: 1) Local IndexedDB video  2) Playlist  3) Waiting + QR code */}
-            {localVideoUrl ? (
+            {/*
+              Priority:
+              1) IndexedDB active playlist (set from LocalFileManager)
+              2) Single local IndexedDB video (from LocalVideoUpload)
+              3) Backend-assigned cloud playlist/video
+              4) Waiting screen
+            */}
+            {activeIndexedPlaylist && idxVideoUrl ? (
+                <>
+                    <video
+                        key={`idb-${idxPlaylistIdx}`}
+                        className="w-full h-screen object-cover"
+                        src={idxVideoUrl}
+                        autoPlay muted playsInline preload="auto"
+                        onEnded={() => setIdxPlaylistIdx((i) => (i + 1) % activeIndexedPlaylist.files.length)}
+                        onError={() => setIdxPlaylistIdx((i) => (i + 1) % activeIndexedPlaylist.files.length)}
+                    />
+                    {/* Playlist name overlay */}
+                    <div className="absolute bottom-6 left-6 pointer-events-none">
+                        <span className="text-white/30 text-xs font-medium bg-black/30 px-3 py-1 rounded-full">
+                            {activeIndexedPlaylist.name} · {idxPlaylistIdx + 1}/{activeIndexedPlaylist.files.length}
+                        </span>
+                    </div>
+                </>
+            ) : localVideoUrl ? (
                 <video className="w-full h-screen object-cover" src={localVideoUrl} autoPlay loop muted playsInline preload="auto" />
             ) : currentVideo?.video?.cloudinary_url ? (
                 <>
