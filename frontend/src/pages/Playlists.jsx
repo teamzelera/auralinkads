@@ -219,9 +219,9 @@ export default function Playlists() {
 
     return (
         <DashboardLayout title="Playlists">
-            <div className="flex items-center justify-between mb-6">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6">
                 <p className="text-text-secondary">{playlists.length} playlists</p>
-                <button id="create-playlist-btn" onClick={() => setShowCreateModal(true)} className="btn-primary flex items-center gap-2">
+                <button id="create-playlist-btn" onClick={() => setShowCreateModal(true)} className="btn-primary flex items-center gap-2 w-full sm:w-auto justify-center">
                     <Plus className="w-4 h-4" />Create Playlist
                 </button>
             </div>
@@ -235,27 +235,29 @@ export default function Playlists() {
                 )}
                 {playlists.map((pl) => (
                     <div key={pl.id} className="card overflow-hidden hover:border-accent-purple/30 transition-all duration-200">
-                        <div className="flex items-center gap-4 p-4">
-                            <div className="w-10 h-10 rounded-xl bg-accent-purple/10 border border-accent-purple/20 flex items-center justify-center shrink-0">
-                                <ListVideo className="w-5 h-5 text-accent-purple" />
-                            </div>
-                            <div className="flex-1 min-w-0">
-                                <div className="flex items-center gap-2">
-                                    <p className="font-semibold text-text-primary truncate">{pl.name}</p>
-                                    {!pl.is_active && <span className="text-[10px] uppercase font-bold px-1.5 py-0.5 rounded bg-status-offline/10 text-status-offline border border-status-offline/20">Inactive</span>}
+                        <div className="flex flex-col sm:flex-row sm:items-center gap-4 p-4">
+                            <div className="flex items-center gap-4 flex-1 min-w-0 w-full">
+                                <div className="w-10 h-10 rounded-xl bg-accent-purple/10 border border-accent-purple/20 flex items-center justify-center shrink-0">
+                                    <ListVideo className="w-5 h-5 text-accent-purple" />
                                 </div>
-                                <p className="text-xs text-text-muted mt-0.5">{pl.video_count} video{pl.video_count !== 1 ? "s" : ""} {pl.description ? `• ${pl.description}` : ""}</p>
+                                <div className="flex-1 min-w-0">
+                                    <div className="flex items-center gap-2">
+                                        <p className="font-semibold text-text-primary truncate">{pl.name}</p>
+                                        {!pl.is_active && <span className="text-[10px] uppercase font-bold px-1.5 py-0.5 rounded bg-status-offline/10 text-status-offline border border-status-offline/20">Inactive</span>}
+                                    </div>
+                                    <p className="text-xs text-text-muted mt-0.5">{pl.video_count} video{pl.video_count !== 1 ? "s" : ""} {pl.description ? `• ${pl.description}` : ""}</p>
+                                </div>
                             </div>
 
-                            <div className="flex items-center gap-2 shrink-0">
+                            <div className="flex items-center justify-end gap-2 shrink-0 w-full sm:w-auto pt-2 sm:pt-0 border-t sm:border-t-0 border-primary-border sm:border-transparent mt-2 sm:mt-0">
                                 <button onClick={() => setAddVideoModal(pl.id)} className="text-text-muted hover:text-accent-cyan p-2 transition-colors" title="Add Videos">
-                                    <PlusCircle className="w-4 h-4" />
+                                    <PlusCircle className="w-5 h-5 sm:w-4 sm:h-4" />
                                 </button>
                                 <button onClick={() => openEditModal(pl)} className="text-text-muted hover:text-accent-purple p-2 transition-colors" title="Edit Settings">
-                                    <Settings className="w-4 h-4" />
+                                    <Settings className="w-5 h-5 sm:w-4 sm:h-4" />
                                 </button>
                                 <button onClick={() => handleDelete(pl.id)} className="text-text-muted hover:text-status-offline p-2 transition-colors" title="Delete Playlist">
-                                    <Trash2 className="w-4 h-4" />
+                                    <Trash2 className="w-5 h-5 sm:w-4 sm:h-4" />
                                 </button>
                                 <button onClick={() => setExpanded(expanded === pl.id ? null : pl.id)} className="text-text-muted hover:text-text-primary p-2 transition-colors ml-2 border-l border-primary-border pl-4">
                                     {expanded === pl.id ? <ChevronUp className="w-5 h-5" /> : <ChevronDown className="w-5 h-5" />}

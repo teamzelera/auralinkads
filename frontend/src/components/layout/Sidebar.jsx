@@ -2,7 +2,7 @@ import { NavLink, useNavigate } from "react-router-dom";
 import { useAuth } from "../../contexts/AuthContext";
 import {
     LayoutDashboard, Monitor, Film, ListVideo,
-    BarChart2, Settings, LogOut, Tv2, Zap
+    BarChart2, Settings, LogOut, Tv2, Zap, X
 } from "lucide-react";
 import logo from "../../images/logo.jpeg";
 
@@ -15,7 +15,7 @@ const navItems = [
     { to: "/settings", icon: Settings, label: "Settings" },
 ];
 
-export default function Sidebar() {
+export default function Sidebar({ isOpen, onClose }) {
     const { user, logout } = useAuth();
     const navigate = useNavigate();
 
@@ -25,11 +25,15 @@ export default function Sidebar() {
     };
 
     return (
-        <aside className="w-64 min-h-screen bg-primary-card border-r border-primary-border flex flex-col shrink-0">
+        <aside 
+            className={`fixed inset-y-0 left-0 z-50 w-64 bg-primary-card border-r border-primary-border flex flex-col shrink-0 transition-transform duration-300 ease-in-out md:relative md:translate-x-0 ${
+                isOpen ? "translate-x-0" : "-translate-x-full"
+            }`}
+        >
             {/* Logo */}
-            <div className="p-6 border-b border-primary-border">
+            <div className="p-4 sm:p-6 border-b border-primary-border flex items-center justify-between">
                 <div className="flex items-center gap-3">
-                    <div className="w-9 h-9 rounded-xl flex items-center justify-center shadow-glow bg-white overflow-hidden">
+                    <div className="w-9 h-9 rounded-xl flex items-center justify-center shadow-glow bg-white overflow-hidden shrink-0">
                         <img src={logo} alt="AuraLink Logo" className="w-full h-full object-contain" />
                     </div>
                     <div>
@@ -37,15 +41,25 @@ export default function Sidebar() {
                         <p className="text-text-muted text-xs -mt-0.5">Signage Platform</p>
                     </div>
                 </div>
+                {/* Mobile Close Button */}
+                <button 
+                    onClick={onClose}
+                    className="md:hidden w-8 h-8 rounded-lg flex items-center justify-center text-text-muted hover:text-white hover:bg-primary-bg transition-colors"
+                >
+                    <X className="w-5 h-5" />
+                </button>
             </div>
 
             {/* Nav */}
-            <nav className="flex-1 p-4 space-y-1">
+            <nav className="flex-1 overflow-y-auto p-4 space-y-1">
                 {navItems.map(({ to, icon: Icon, label }) => (
                     <NavLink
                         key={to}
                         to={to}
                         end={to === "/dashboard"}
+                        onClick={() => {
+                            if (window.innerWidth < 768) onClose();
+                        }}
                         className={({ isActive }) =>
                             isActive ? "sidebar-item-active" : "sidebar-item"
                         }

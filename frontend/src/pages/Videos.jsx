@@ -111,14 +111,14 @@ export default function Videos() {
 
     return (
         <DashboardLayout title="Videos">
-            <div className="flex items-center justify-between mb-6">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6">
                 <p className="text-text-secondary">{videos.length} videos in library</p>
-                <div className="flex gap-3">
-                    <button id="upload-file-btn" onClick={() => fileInputRef.current?.click()} disabled={uploading} className="btn-secondary flex items-center gap-2">
+                <div className="flex w-full sm:w-auto gap-3">
+                    <button id="upload-file-btn" onClick={() => fileInputRef.current?.click()} disabled={uploading} className="btn-secondary flex-1 sm:flex-none flex items-center justify-center gap-2">
                         {uploading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
                         {uploading ? "Uploading..." : "Upload File"}
                     </button>
-                    <button id="add-url-btn" onClick={() => setShowUpload(true)} className="btn-primary flex items-center gap-2">
+                    <button id="add-url-btn" onClick={() => setShowUpload(true)} className="btn-primary flex-1 sm:flex-none flex items-center justify-center gap-2">
                         <Film className="w-4 h-4" />Add URL
                     </button>
                 </div>

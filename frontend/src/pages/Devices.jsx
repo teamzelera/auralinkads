@@ -89,9 +89,9 @@ export default function Devices() {
 
     return (
         <DashboardLayout title="Devices">
-            <div className="flex items-center justify-between mb-6">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6">
                 <p className="text-text-secondary">{devices.length} devices registered</p>
-                <button id="add-device-btn" onClick={() => setShowModal(true)} className="btn-primary flex items-center gap-2">
+                <button id="add-device-btn" onClick={() => setShowModal(true)} className="btn-primary flex items-center gap-2 w-full sm:w-auto justify-center">
                     <Plus className="w-4 h-4" />Add Device
                 </button>
             </div>
@@ -146,15 +146,15 @@ export default function Devices() {
                                     </td>
                                     <td className="table-cell text-text-muted">{d.last_seen ? formatDistanceToNow(d.last_seen) : "Never"}</td>
                                     <td className="table-cell">
-                                        <div className="flex items-center gap-2">
+                                        <div className="flex items-center gap-2 flex-wrap">
                                             <button onClick={() => { setAssignModal(d); setAssignForm({ type: "playlist", id: "", loop_enabled: true }); }}
-                                                className="text-xs text-accent-purple hover:text-accent-purple-hover font-medium px-2 py-1 rounded bg-accent-purple/10 hover:bg-accent-purple/20 transition-colors">
+                                                className="text-xs text-accent-purple hover:text-accent-purple-hover font-medium px-2 py-1 rounded bg-accent-purple/10 hover:bg-accent-purple/20 transition-colors whitespace-nowrap">
                                                 Assign
                                             </button>
-                                            <button onClick={() => handleRestart(d.id)} className="text-text-muted hover:text-accent-cyan transition-colors" title="Remote Restart">
+                                            <button onClick={() => handleRestart(d.id)} className="text-text-muted hover:text-accent-cyan p-1.5 transition-colors" title="Remote Restart">
                                                 <RefreshCw className="w-4 h-4" />
                                             </button>
-                                            <button onClick={() => handleDelete(d.id)} className="text-text-muted hover:text-status-offline transition-colors">
+                                            <button onClick={() => handleDelete(d.id)} className="text-text-muted hover:text-status-offline p-1.5 transition-colors">
                                                 <Trash2 className="w-4 h-4" />
                                             </button>
                                         </div>

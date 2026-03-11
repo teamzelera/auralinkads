@@ -44,13 +44,13 @@ export default function Analytics() {
                     )}
                     {uptime.map((d) => (
                         <div key={d.device_id} className="space-y-2">
-                            <div className="flex items-center justify-between">
-                                <div className="flex items-center gap-3">
-                                    <span className={`status-dot ${d.status === "online" ? "bg-status-online" : "bg-status-offline"}`} />
-                                    <span className="text-sm font-medium text-text-primary">{d.device_name}</span>
-                                    <span className={d.status === "online" ? "badge-online" : "badge-offline"}>{d.status}</span>
+                            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                                <div className="flex items-center gap-3 truncate">
+                                    <span className={`status-dot shrink-0 ${d.status === "online" ? "bg-status-online" : "bg-status-offline"}`} />
+                                    <span className="text-sm font-medium text-text-primary truncate">{d.device_name}</span>
+                                    <span className={`shrink-0 ${d.status === "online" ? "badge-online" : "badge-offline"}`}>{d.status}</span>
                                 </div>
-                                <div className="flex items-center gap-4 text-xs text-text-muted">
+                                <div className="flex items-center gap-4 text-xs text-text-muted shrink-0">
                                     <span className="flex items-center gap-1">
                                         <Clock className="w-3 h-3" />
                                         {d.last_seen ? formatDistanceToNow(d.last_seen) : "Never seen"}
