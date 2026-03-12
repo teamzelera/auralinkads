@@ -9,7 +9,10 @@ import logo from "../images/logo.jpeg";
 import {
     getAllReceivedFiles,
     getReceivedFileUrl,
+    getLocalVideoRecord,
+    getLocalVideoUrl,
     deleteReceivedFile,
+    deleteLocalVideo,
     savePlaylist,
     getAllPlaylists,
     getPlaylistById,
@@ -30,12 +33,18 @@ const formatDate = (ts) =>
 function InlinePlayer({ files, startIdx = 0, onClose }) {
     const [idx, setIdx] = useState(startIdx);
     const [url, setUrl] = useState(null);
+    const [loop, setLoop] = useState(false);
     const videoRef = useRef();
     const rotation = Number(localStorage.getItem("device_rotation_angle") || 0);
 
+    // Load URL — handle normal received files AND the special local-upload slot
     useEffect(() => {
         let revoke;
-        getReceivedFileUrl(files[idx].fileId).then((u) => {
+        const fileEntry = files[idx];
+        const fetchFn = fileEntry.fileId === "local_upload"
+            ? getLocalVideoUrl()
+            : getReceivedFileUrl(fileEntry.fileId);
+        fetchFn.then((u) => {
             setUrl(u);
             revoke = u;
         });
@@ -50,15 +59,26 @@ function InlinePlayer({ files, startIdx = 0, onClose }) {
     }, [url]);
 
     const next = () => setIdx((i) => (i + 1) % files.length);
+    const isSingle = files.length === 1;
 
     return (
         <div className="fixed inset-0 bg-black z-50 flex flex-col">
             {/* Top bar */}
-            <div className="flex items-center justify-between px-4 py-3 bg-black/80 backdrop-blur-sm border-b border-gray-800">
-                <span className="text-white text-sm font-medium truncate max-w-xs">
+            <div className="flex items-center gap-3 px-4 py-3 bg-black/80 backdrop-blur-sm border-b border-gray-800">
+                <span className="text-white text-sm font-medium truncate flex-1">
                     {files[idx].name}
-                    {files.length > 1 && <span className="text-gray-500 ml-2">({idx + 1}/{files.length})</span>}
+                    {!isSingle && <span className="text-gray-500 ml-2">({idx + 1}/{files.length})</span>}
                 </span>
+                {/* Loop toggle */}
+                <button
+                    onClick={() => setLoop((l) => !l)}
+                    title={loop ? "Loop: On" : "Loop: Off"}
+                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
+                        loop ? "bg-purple-500/30 text-purple-300" : "bg-gray-800 text-gray-500 hover:text-gray-300"
+                    }`}
+                >
+                    🔁 {loop ? "Loop On" : "Loop Off"}
+                </button>
                 <button onClick={onClose} className="w-8 h-8 rounded-full bg-gray-800 hover:bg-gray-700 flex items-center justify-center transition-colors">
                     <X className="w-4 h-4 text-gray-300" />
                 </button>
@@ -74,7 +94,11 @@ function InlinePlayer({ files, startIdx = 0, onClose }) {
                         style={{ transform: `rotate(${rotation}deg)`, transition: "transform 0.3s" }}
                         controls
                         autoPlay
-                        onEnded={files.length > 1 ? next : undefined}
+                        loop={loop && isSingle}
+                        onEnded={() => {
+                            if (loop && !isSingle) { next(); return; }
+                            if (!loop && !isSingle) next();
+                        }}
                         playsInline
                     />
                 ) : (
@@ -82,8 +106,8 @@ function InlinePlayer({ files, startIdx = 0, onClose }) {
                 )}
             </div>
 
-            {/* Bottom nav for playlists */}
-            {files.length > 1 && (
+            {/* Bottom nav for multi-file */}
+            {!isSingle && (
                 <div className="flex items-center justify-center gap-4 px-4 py-3 bg-black/80 border-t border-gray-800">
                     <button onClick={() => setIdx((i) => (i - 1 + files.length) % files.length)}
                         className="px-4 py-2 rounded-xl bg-gray-800 hover:bg-gray-700 text-sm text-gray-300 transition-colors">
@@ -225,11 +249,22 @@ export default function LocalFileManager() {
     // Inline player
     const [playerFiles, setPlayerFiles] = useState(null); // null = closed; array = playing
 
-    // Load data
+    // Load data — received files + local upload slot
     const loadFiles = useCallback(async () => {
-        const all = await getAllReceivedFiles().catch(() => []);
-        all.sort((a, b) => (b.created_at || 0) - (a.created_at || 0));
-        setFiles(all);
+        const received = await getAllReceivedFiles().catch(() => []);
+        received.sort((a, b) => (b.created_at || 0) - (a.created_at || 0));
+
+        // Also pull the single local-upload slot from LocalVideoUpload
+        const localRec = await getLocalVideoRecord().catch(() => null);
+        const localEntry = localRec ? [{
+            id: "local_upload",
+            file_name: localRec.name || "Local Upload",
+            file_size: localRec.file?.size || 0,
+            created_at: localRec.savedAt || 0,
+            isLocalUpload: true,
+        }] : [];
+
+        setFiles([...localEntry, ...received]);
     }, []);
 
     const loadPlaylists = useCallback(async () => {
@@ -255,18 +290,25 @@ export default function LocalFileManager() {
     // ── File actions ──
     const handleDeleteFile = async (id) => {
         if (!confirm("Delete this file from local storage?")) return;
-        await deleteReceivedFile(id).catch(() => {});
+        if (id === "local_upload") {
+            await deleteLocalVideo().catch(() => {});
+        } else {
+            await deleteReceivedFile(id).catch(() => {});
+        }
         setSelected((prev) => { const n = new Set(prev); n.delete(id); return n; });
         loadFiles();
     };
 
     const handleDeleteSelected = async () => {
         if (!confirm(`Delete ${selected.size} file(s)?`)) return;
-        await Promise.all([...selected].map((id) => deleteReceivedFile(id).catch(() => {})));
+        await Promise.all([...selected].map((id) =>
+            id === "local_upload" ? deleteLocalVideo().catch(() => {}) : deleteReceivedFile(id).catch(() => {})
+        ));
         setSelected(new Set());
         loadFiles();
     };
 
+    // fileId: for local_upload use "local_upload", for received files use f.id
     const handlePlayFile = (file) => setPlayerFiles([{ fileId: file.id, name: file.file_name }]);
     const handlePlaySelected = () => setPlayerFiles(selectedFiles.map((f) => ({ fileId: f.id, name: f.file_name })));
 
@@ -356,7 +398,12 @@ export default function LocalFileManager() {
 
                                 {/* Info */}
                                 <div className="flex-1 min-w-0">
-                                    <p className="text-white text-sm font-medium truncate">{f.file_name}</p>
+                                    <div className="flex items-center gap-2">
+                                        <p className="text-white text-sm font-medium truncate">{f.file_name}</p>
+                                        {f.isLocalUpload && (
+                                            <span className="flex-shrink-0 text-xs bg-blue-500/20 text-blue-400 px-1.5 py-0.5 rounded font-medium">Local</span>
+                                        )}
+                                    </div>
                                     <p className="text-gray-600 text-xs">{formatSize(f.file_size)} · {formatDate(f.created_at)}</p>
                                 </div>
 

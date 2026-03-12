@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { Settings, X, LogOut, Trash2, Info, FileText, Mail, Upload, Send, FolderOpen, Clock, RotateCw } from "lucide-react";
 import logo from "../images/logo.jpeg";
-import { getLocalVideoUrl, saveReceivedFile, getPlaylistById, getReceivedFileUrl } from "../utils/localVideoDb";
+import { saveReceivedFile, getPlaylistById, getReceivedFileUrl } from "../utils/localVideoDb";
 import { getWsBase, resolveMediaUrl } from "../utils/backendUrls";
 
 const PLAYER_API = import.meta.env.VITE_API_BASE || "http://localhost:8000/api";
@@ -19,7 +19,7 @@ export default function DevicePlayer() {
     const [error, setError] = useState("");
     const [showSettings, setShowSettings] = useState(false);
     const [settingsMenu, setSettingsMenu] = useState(null);
-    const [localVideoUrl, setLocalVideoUrl] = useState(null);
+    // NOTE: localVideoUrl intentionally removed — local uploads are managed via /device/files
 
     // Transfer queue state
     const [transferNotification, setTransferNotification] = useState(null);
@@ -57,12 +57,8 @@ export default function DevicePlayer() {
         }
     }, [step]);
 
-    // On mount: load local video and rotation from IndexedDB/localStorage
+    // On mount: load rotation from localStorage and active playlist from IndexedDB
     useEffect(() => {
-        getLocalVideoUrl()
-            .then((url) => { if (url) setLocalVideoUrl(url); })
-            .catch(() => {});
-            
         const savedAngle = localStorage.getItem("device_rotation_angle");
         if (savedAngle !== null) {
             setDeviceRotation(Number(savedAngle));
