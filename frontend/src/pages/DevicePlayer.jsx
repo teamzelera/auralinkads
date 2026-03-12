@@ -482,7 +482,6 @@ export default function DevicePlayer() {
                                     className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-left transition-colors duration-200 text-purple-300 hover:bg-purple-500/10">
                                     <Upload className="w-5 h-5" />
                                     <span className="font-medium text-sm flex-1">Upload Local Video</span>
-                                    {localVideoUrl && <span className="w-2 h-2 rounded-full bg-purple-400 flex-shrink-0" title="Active" />}
                                 </button>
 
                                 {/* Section: Device */}
