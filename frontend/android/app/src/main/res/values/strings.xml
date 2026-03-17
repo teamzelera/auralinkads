@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">AuraLink Display</string>
+    <string name="title_activity_main">AuraLink Display</string>
+    <string name="package_name">com.auralinkads.display</string>
+    <string name="custom_url_scheme">com.auralinkads.display</string>
+</resources>

@@ -7,7 +7,47 @@
  *   3. "playlists"      — user-created playlists of received files
  *
  * DB:    auralink-db   (version 3)
+ *
+ * On Android (Capacitor), received files are saved to the TV's
+ * internal storage (Documents/AuraLink/) via the Filesystem plugin.
+ * On web, they continue to be stored in IndexedDB as blobs.
  */
+
+// ── Capacitor Filesystem (only used on native Android) ───────
+let CapacitorFilesystem = null;
+let CapacitorDirectory = null;
+let isNative = false;
+
+// Dynamically import Capacitor to avoid breaking the web build
+(async () => {
+  try {
+    const { Capacitor } = await import('@capacitor/core');
+    isNative = Capacitor.isNativePlatform();
+    if (isNative) {
+      const mod = await import('@capacitor/filesystem');
+      CapacitorFilesystem = mod.Filesystem;
+      CapacitorDirectory = mod.Directory;
+    }
+  } catch {
+    // Not running in Capacitor — stay in web/IndexedDB mode
+  }
+})();
+
+const AURALINK_DIR = 'AuraLink';
+
+/** Convert a Blob to a base64 data string (without prefix) */
+function blobToBase64(blob) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      // result is like "data:video/mp4;base64,AAAA..." — strip the prefix
+      const base64 = reader.result.split(',')[1];
+      resolve(base64);
+    };
+    reader.onerror = reject;
+    reader.readAsDataURL(blob);
+  });
+}
 
 const DB_NAME = "auralink-db";
 const DB_VERSION = 3;
@@ -23,7 +63,6 @@ function openDB() {
 
     request.onupgradeneeded = (e) => {
       const db = e.target.result;
-      const oldVersion = e.oldVersion;
 
       // v1 store
       if (!db.objectStoreNames.contains(STORE_LOCAL)) {
@@ -104,17 +143,22 @@ export async function deleteLocalVideo() {
 // RECEIVED FILES (from phone transfer)
 // ═══════════════════════════════════════════════════════════
 
-/** Save a received file blob to IndexedDB. Returns the new record id. */
-export async function saveReceivedFile(blob, name, fileType) {
+/**
+ * Internal: save metadata to IndexedDB (used by both web and native paths).
+ * On native: stores nativeUri instead of blob.
+ * On web: stores the actual blob.
+ */
+async function _saveReceivedFileMeta({ blob, name, fileType, size, nativeUri }) {
   const db = await openDB();
   return new Promise((resolve, reject) => {
     const tx    = db.transaction(STORE_RECEIVED, "readwrite");
     const store = tx.objectStore(STORE_RECEIVED);
     const req   = store.add({
-      file: blob,
+      file: blob || null,       // null on native (file is on disk)
       file_name: name,
       file_type: fileType,
-      file_size: blob.size,
+      file_size: size,
+      nativeUri: nativeUri || null, // set on native Android
       created_at: Date.now(),
     });
     req.onsuccess = (e) => resolve(e.target.result);
@@ -122,7 +166,54 @@ export async function saveReceivedFile(blob, name, fileType) {
   });
 }
 
-/** Get all received file records (metadata only, no blob URLs). */
+/**
+ * Save a received file.
+ * - On Android (native): saves the file to Documents/AuraLink/ on internal storage,
+ *   then saves lightweight metadata to IndexedDB.
+ * - On web: saves the blob directly to IndexedDB (original behaviour).
+ *
+ * Returns the new IndexedDB record id.
+ */
+export async function saveReceivedFile(blob, name, fileType) {
+  if (isNative && CapacitorFilesystem) {
+    try {
+      // Ensure the directory exists
+      await CapacitorFilesystem.mkdir({
+        path: AURALINK_DIR,
+        directory: CapacitorDirectory.Documents,
+        recursive: true,
+      }).catch(() => {}); // ignore if already exists
+
+      const base64 = await blobToBase64(blob);
+
+      // Write file to Documents/AuraLink/<filename>
+      const result = await CapacitorFilesystem.writeFile({
+        path: `${AURALINK_DIR}/${name}`,
+        data: base64,
+        directory: CapacitorDirectory.Documents,
+      });
+
+      console.log('[AuraLink] File saved to internal storage:', result.uri);
+
+      // Save metadata only (no blob in IndexedDB)
+      return _saveReceivedFileMeta({
+        blob: null,
+        name,
+        fileType,
+        size: blob.size,
+        nativeUri: result.uri,
+      });
+    } catch (err) {
+      console.error('[AuraLink] Native filesystem save failed, falling back to IndexedDB:', err);
+      // Fallback to IndexedDB if native write fails
+    }
+  }
+
+  // Web / fallback path — save blob to IndexedDB
+  return _saveReceivedFileMeta({ blob, name, fileType, size: blob.size, nativeUri: null });
+}
+
+/** Get all received file records (metadata only). */
 export async function getAllReceivedFiles() {
   const db = await openDB();
   return new Promise((resolve, reject) => {
@@ -146,7 +237,11 @@ export async function getReceivedFileById(id) {
   });
 }
 
-/** Get a blob URL for a specific received file by id. */
+/**
+ * Get a playable URL for a received file.
+ * - On Android native: returns the native file:// URI directly.
+ * - On web: creates a blob URL from IndexedDB.
+ */
 export async function getReceivedFileUrl(id) {
   const db = await openDB();
   return new Promise((resolve, reject) => {
@@ -156,14 +251,40 @@ export async function getReceivedFileUrl(id) {
     req.onsuccess = (e) => {
       const record = e.target.result;
       if (!record) return resolve(null);
-      resolve(URL.createObjectURL(record.file));
+
+      // Native: use the file URI saved on internal storage
+      if (record.nativeUri) {
+        return resolve(record.nativeUri);
+      }
+
+      // Web: create an object URL from the stored blob
+      if (record.file) {
+        return resolve(URL.createObjectURL(record.file));
+      }
+
+      resolve(null);
     };
     req.onerror = (e) => reject(e.target.error);
   });
 }
 
-/** Delete a received file by id. */
+/** Delete a received file by id (removes from IndexedDB and native storage if applicable). */
 export async function deleteReceivedFile(id) {
+  // If native, also delete the file from disk
+  if (isNative && CapacitorFilesystem) {
+    try {
+      const record = await getReceivedFileById(id);
+      if (record?.file_name) {
+        await CapacitorFilesystem.deleteFile({
+          path: `${AURALINK_DIR}/${record.file_name}`,
+          directory: CapacitorDirectory.Documents,
+        }).catch(() => {}); // ignore if already gone
+      }
+    } catch {
+      // Ignore errors during file deletion
+    }
+  }
+
   const db = await openDB();
   return new Promise((resolve, reject) => {
     const tx    = db.transaction(STORE_RECEIVED, "readwrite");

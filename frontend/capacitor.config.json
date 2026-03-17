@@ -1,0 +1,11 @@
+{
+  "appId": "com.auralinkads.display",
+  "appName": "AuraLink Display",
+  "webDir": "dist",
+  "android": {
+    "allowMixedContent": true
+  },
+  "server": {
+    "cleartext": true
+  }
+}
